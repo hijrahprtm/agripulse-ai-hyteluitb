@@ -2,7 +2,7 @@ import streamlit as st
 from pygooglenews import GoogleNews
 from groq import Groq
 import chromadb
-from datetime import datetime, timedelta # Ditambah timedelta untuk WIB
+from datetime import datetime, timedelta
 import pandas as pd
 import pypdf
 
@@ -10,7 +10,7 @@ import pypdf
 try:
     GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 except KeyError:
-    st.error("API Key 'GROQ_API_KEY' tidak ditemukan di Secrets.")
+    st.error("API Key 'GROQ_API_KEY' tidak ditemukan di Secrets Streamlit.")
     st.stop()
 
 client = Groq(api_key=GROQ_API_KEY)
@@ -51,7 +51,6 @@ def process_pdf_to_db(uploaded_file):
     
     chunks = [text[i:i+1000] for i in range(0, len(text), 900)]
     
-    # Sinkronisasi Jam WIB untuk ID Database
     waktu_wib = datetime.now() + timedelta(hours=7)
     timestamp = waktu_wib.strftime("%Y%m%d_%H%M%S")
     
@@ -72,12 +71,21 @@ def get_hybrid_analysis(user_query, news_context, journal_context):
     
     PERTANYAAN USER: {user_query}
     """
-    completion = client.chat.completions.create(
-        messages=[{"role": "user", "content": prompt}],
-        model="llama-3.3-70b-versatile", 
-        temperature=0.4
-    )
-    return completion.choices[0].message.content
+    
+    try:
+        # Menggunakan model 8b agar limit lebih longgar dan proses lebih ringan/cepat
+        completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.1-8b-instant", 
+            temperature=0.4
+        )
+        return completion.choices[0].message.content
+    except Exception as e:
+        # Logika Anti-Limit: Menangkap error rate limit
+        if "rate_limit" in str(e).lower():
+            return "⚠️ **Limit Tercapai:** Wah, AgriPulse sedang melayani banyak permintaan. Mohon tunggu 30-60 detik lalu coba tekan Enter kembali ya, Mas."
+        else:
+            return f"❌ **Terjadi Kesalahan:** {str(e)}"
 
 # --- 4. UI LAYOUT ---
 st.title("☕ AgriPulse AI")
@@ -123,12 +131,13 @@ tab1, tab2 = st.tabs(["💡 Konsultasi Strategi", "📊 Market Dashboard"])
 with tab1:
     st.subheader("Konsultasi Strategi Hybrid")
     user_q = st.text_input("Ajukan pertanyaan analisis strategis:", 
-                           placeholder="Contoh: Strategi efisiensi biaya?")
+                           placeholder="Contoh: Bagaimana potensi S1 di Semarang?")
 
     if user_q:
-        with st.spinner("Menyisir database..."):
+        with st.spinner("Menyisir database dan berita..."):
             live_news = get_coffee_news()
             try:
+                # Mengambil 10 chunk agar data tetap akurat meski pakai model lebih kecil
                 results = collection.query(query_texts=[user_q], n_results=10)
                 j_context = "\n\n".join(results['documents'][0]) if results['documents'] else "Kosong."
             except:
@@ -136,17 +145,15 @@ with tab1:
             
             answer = get_hybrid_analysis(user_q, live_news, j_context)
             st.markdown("---")
+            st.markdown("### 💡 Rekomendasi AgriPulse:")
             st.info(answer)
 
 with tab2:
     col_a, col_b = st.columns([1, 1])
     with col_a:
         st.subheader("📰 Market Pulse")
-        
-        # SINKRONISASI JAM KE WIB
         waktu_wib = datetime.now() + timedelta(hours=7)
         st.caption(f"Live Feed | {waktu_wib.strftime('%H:%M')} WIB")
-        
         st.write(get_coffee_news())
     with col_b:
         st.subheader("📈 Tren Harga (Estimasi)")
@@ -154,4 +161,4 @@ with tab2:
         st.line_chart(chart_data)
 
 st.divider()
-st.caption("AgriPulse v2.2 | Final Production | TelU x ITB Collaboration")
+st.caption("AgriPulse v2.3 | Robust Mode | TelU x ITB Collaboration")
