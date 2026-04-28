@@ -2,21 +2,20 @@ import streamlit as st
 from pygooglenews import GoogleNews
 from groq import Groq
 import chromadb
-from datetime import datetime
+from datetime import datetime, timedelta # Ditambah timedelta untuk WIB
 import pandas as pd
 import pypdf
 
 # --- 1. CONFIG & SETUP (SECURE) ---
-# Mengambil API Key dari Streamlit Secrets (Bukan ditulis langsung di kode)
 try:
     GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 except KeyError:
-    st.error("API Key 'GROQ_API_KEY' tidak ditemukan di Secrets. Silakan atur di Streamlit Cloud Settings.")
+    st.error("API Key 'GROQ_API_KEY' tidak ditemukan di Secrets.")
     st.stop()
 
 client = Groq(api_key=GROQ_API_KEY)
 
-# Setup Database Lokal (ChromaDB) dengan folder permanen
+# Setup Database Lokal (ChromaDB)
 db_client = chromadb.PersistentClient(path="./agripulse_db")
 collection = db_client.get_or_create_collection(name="coffee_knowledge_base")
 
@@ -29,7 +28,6 @@ st.markdown("""
     .stTabs [data-baseweb="tab-list"] { gap: 24px; }
     .stTabs [data-baseweb="tab"] { height: 50px; font-weight: bold; font-size: 16px; }
     .stInfo { background-color: #f0f4f8; border-left: 5px solid #6f4e37; color: #1e1e1e; }
-    .stCaption { line-height: 1.2; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -52,9 +50,12 @@ def process_pdf_to_db(uploaded_file):
         if content: text += content
     
     chunks = [text[i:i+1000] for i in range(0, len(text), 900)]
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    ids = [f"id_{uploaded_file.name}_{timestamp}_{i}" for i in range(len(chunks))]
     
+    # Sinkronisasi Jam WIB untuk ID Database
+    waktu_wib = datetime.now() + timedelta(hours=7)
+    timestamp = waktu_wib.strftime("%Y%m%d_%H%M%S")
+    
+    ids = [f"id_{uploaded_file.name}_{timestamp}_{i}" for i in range(len(chunks))]
     collection.add(documents=chunks, ids=ids)
     return len(chunks)
 
@@ -71,7 +72,6 @@ def get_hybrid_analysis(user_query, news_context, journal_context):
     
     PERTANYAAN USER: {user_query}
     """
-    
     completion = client.chat.completions.create(
         messages=[{"role": "user", "content": prompt}],
         model="llama-3.3-70b-versatile", 
@@ -123,7 +123,7 @@ tab1, tab2 = st.tabs(["💡 Konsultasi Strategi", "📊 Market Dashboard"])
 with tab1:
     st.subheader("Konsultasi Strategi Hybrid")
     user_q = st.text_input("Ajukan pertanyaan analisis strategis:", 
-                           placeholder="Contoh: Strategi efisiensi biaya saat harga kopi naik?")
+                           placeholder="Contoh: Strategi efisiensi biaya?")
 
     if user_q:
         with st.spinner("Menyisir database..."):
@@ -142,7 +142,11 @@ with tab2:
     col_a, col_b = st.columns([1, 1])
     with col_a:
         st.subheader("📰 Market Pulse")
-        st.caption(f"Live Feed | {datetime.now().strftime('%H:%M')} WIB")
+        
+        # SINKRONISASI JAM KE WIB
+        waktu_wib = datetime.now() + timedelta(hours=7)
+        st.caption(f"Live Feed | {waktu_wib.strftime('%H:%M')} WIB")
+        
         st.write(get_coffee_news())
     with col_b:
         st.subheader("📈 Tren Harga (Estimasi)")
@@ -150,4 +154,4 @@ with tab2:
         st.line_chart(chart_data)
 
 st.divider()
-st.caption("AgriPulse v2.1 | Secure Cloud Edition | TelU x ITB Collaboration")
+st.caption("AgriPulse v2.2 | Final Production | TelU x ITB Collaboration")
