@@ -1,0 +1,6 @@
+streamlit
+pygooglenews
+groq
+chromadb
+pypdf
+pandas
