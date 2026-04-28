@@ -1,7 +1,7 @@
-streamlit==1.32.0
+streamlit
 pygooglenews
 groq
 chromadb
 pypdf
 pandas
-protobuf==4.25.1
+protobuf==3.20.3
