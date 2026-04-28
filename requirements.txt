@@ -1,6 +1,7 @@
 streamlit
 pygooglenews
 groq
-chromadb
+chromadb==0.4.15
 pypdf
 pandas
+protobuf==4.25.1
