@@ -9,7 +9,7 @@ import re
 import os
 
 # --- 0. AUTO-FOLDER CREATION ---
-# Penting agar Streamlit tidak error saat folder database tidak ada di GitHub
+# Mencegah InternalError jika folder tidak ada di GitHub
 DB_PATH = "./agripulse_db"
 if not os.path.exists(DB_PATH):
     os.makedirs(DB_PATH)
@@ -57,22 +57,22 @@ def get_coffee_news():
         return "Gagal mengambil berita terbaru."
 
 def extract_price_from_news(news_text):
-    prompt = f"Tugas: Berikan 4 angka harga kopi (Rupiah per kg) dari berita ini: {news_text}. Range 38000-48000. HANYA ANGKA pisahkan koma."
+    prompt = f"Berikan 4 angka harga kopi (Rp/kg) dari teks ini: {news_text}. Range 38000-48000. HANYA ANGKA pisahkan koma."
     try:
+        # Menggunakan Mixtral untuk ekstraksi cepat
         response = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.1-8b-instant",
+            model="mixtral-8x7b-32768",
             temperature=0.1
         )
         prices = [int(s) for s in re.findall(r'\d+', response.choices[0].message.content)]
         return prices[:4] if len(prices) >= 4 else [38000, 39500, 41000, 43500]
     except:
-        return [38000, 40000, 42000, 41000]
+        return [38500, 40500, 42000, 41500]
 
 def process_pdf_to_db(uploaded_file):
     reader = pypdf.PdfReader(uploaded_file)
     text = "".join([p.extract_text() for p in reader.pages if p.extract_text()])
-    # Membagi teks menjadi potongan 1000 karakter
     chunks = [text[i:i+1000] for i in range(0, len(text), 900)]
     waktu_wib = datetime.now() + timedelta(hours=7)
     timestamp = waktu_wib.strftime("%Y%m%d_%H%M%S")
@@ -87,14 +87,15 @@ def get_hybrid_analysis(user_query, news_context, journal_context):
     RISET JURNAL: {journal_context}
     PERTANYAAN USER: {user_query}"""
     try:
+        # Menggunakan Gemma 2 untuk analisis yang lebih stabil dan jarang limit
         completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.1-8b-instant", 
+            model="gemma2-9b-it", 
             temperature=0.4
         )
         return completion.choices[0].message.content
     except Exception:
-        return "⚠️ Sedang terjadi limit trafik (Rate Limit). Silakan coba lagi dalam 1 menit."
+        return "⚠️ Limit trafik API terdeteksi. Harap tunggu 60 detik tanpa menekan tombol apapun agar sistem bisa me-reset kuota Anda."
 
 # --- 4. UI LAYOUT ---
 st.title("☕ AgriPulse AI")
@@ -149,28 +150,27 @@ tab1, tab2, tab3 = st.tabs(["💡 Konsultasi Strategi", "📊 Market Dashboard",
 
 with tab1:
     st.subheader("Konsultasi Strategi Hybrid")
-    user_q = st.text_area("Ajukan pertanyaan atau masalah perkebunan Anda:", height=150, placeholder="Contoh: Bagaimana strategi pupuk organik saat harga jual sedang turun?")
+    user_q = st.text_area("Ajukan pertanyaan perkebunan Anda:", height=120, placeholder="Contoh: Strategi efisiensi pupuk organik saat harga turun?")
 
     if st.button("Mulai Analisis AI"):
         if user_q:
-            with st.spinner("Menyisir database jurnal dan berita terbaru..."):
+            with st.spinner("Sinkronisasi jurnal & berita pasar..."):
                 news = get_coffee_news()
                 
-                # Pengambilan konteks dari ChromaDB dengan proteksi jika kosong
                 try:
                     results = collection.query(query_texts=[user_q], n_results=5)
                     if results and results.get('documents') and len(results['documents'][0]) > 0:
                         j_context = "\n\n".join(results['documents'][0])
                     else:
-                        j_context = "Data riset internal kosong. AI akan menjawab berdasarkan pengetahuan umum dan berita."
+                        j_context = "Data riset internal kosong. AI menjawab berbasis berita."
                 except Exception:
-                    j_context = "Database belum siap. Menggunakan mode pengetahuan umum."
+                    j_context = "Database offline. Menggunakan pengetahuan umum."
                 
                 answer = get_hybrid_analysis(user_q, news, j_context)
                 st.markdown("---")
                 st.info(answer)
         else:
-            st.warning("Silakan masukkan pertanyaan terlebih dahulu.")
+            st.warning("Silakan masukkan pertanyaan.")
 
 with tab2:
     col_a, col_b = st.columns([1, 1])
@@ -188,4 +188,4 @@ with tab3:
     st.warning("Feature Coming Soon: AI-Powered Disease Detection")
 
 st.divider()
-st.caption("AgriPulse v2.7 | Anti-Error Edition | TelU x ITB")
+st.caption("AgriPulse v2.8 | Optimized Edition | TelU x ITB")
