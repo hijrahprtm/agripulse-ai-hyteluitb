@@ -10,8 +10,7 @@ import re
 # --- 1. CONFIG & SETUP ---
 try:
     GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-    # Password Admin dari Secrets, default 'admin123'
-    ADMIN_KEY = st.secrets.get("ADMIN_KEY", "admin123") 
+    ADMIN_KEY = st.secrets.get("ADMIN_KEY", "hijrahxyokixteluxitbangkatan2021") 
 except KeyError:
     st.error("Konfigurasi Secrets (GROQ_API_KEY) tidak ditemukan.")
     st.stop()
@@ -45,21 +44,14 @@ def get_coffee_news():
         return "Gagal mengambil berita terbaru."
 
 def extract_price_from_news(news_text):
-    """AI Price Extraction - Menghasilkan data untuk grafik"""
-    prompt = f"""
-    Tugas: Berikan 4 angka harga kopi (Rupiah per kg) berdasarkan sentimen berita ini.
-    Gunakan rentang 38000-48000. HANYA berikan angka dipisahkan koma.
-    Contoh: 39000, 41500, 40000, 43000
-    Berita: {news_text}
-    """
+    prompt = f"Tugas: Berikan 4 angka harga kopi (Rupiah per kg) dari berita ini: {news_text}. Range 38000-48000. HANYA ANGKA pisahkan koma."
     try:
         response = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model="llama-3.1-8b-instant",
             temperature=0.1
         )
-        raw_output = response.choices[0].message.content
-        prices = [int(s) for s in re.findall(r'\d+', raw_output)]
+        prices = [int(s) for s in re.findall(r'\d+', response.choices[0].message.content)]
         return prices[:4] if len(prices) >= 4 else [38000, 39500, 41000, 43500]
     except:
         return [38000, 40000, 42000, 41000]
@@ -83,14 +75,13 @@ def get_hybrid_analysis(user_query, news_context, journal_context):
             temperature=0.4
         )
         return completion.choices[0].message.content
-    except Exception as e:
-        return f"⚠️ Sedang sibuk atau limit. Tunggu sebentar ya."
+    except Exception:
+        return "⚠️ Sedang limit. Tunggu sebentar."
 
 # --- 4. UI LAYOUT ---
 st.title("☕ AgriPulse AI")
 st.markdown("##### *Hybrid Decision Support System for Coffee Farmers*")
 
-# BRANDING BAR (Role Updated)
 col_univ1, col_univ2 = st.columns(2)
 with col_univ1:
     c_logo1, c_text1 = st.columns([1, 4])
@@ -98,7 +89,6 @@ with col_univ1:
         try: st.image("telulogo.webp", width=60)
         except: st.caption("Logo TelU")
     with c_text1:
-        # UPDATE ROLE HIJRAH -> AI ENGINEER
         st.markdown('<p class="univ-label"><b>Hijrah Wira Pratama, S.Si.D.</b><br>AI Engineer (TelU)</p>', unsafe_allow_html=True)
 
 with col_univ2:
@@ -107,7 +97,6 @@ with col_univ2:
         try: st.image("itblogo.png", width=55)
         except: st.caption("Logo ITB")
     with c_text2:
-        # UPDATE ROLE YOKIE -> AGRICULTURAL RESEARCHER
         st.markdown('<p class="univ-label"><b>Yokie Lidiantoro, S.T.</b><br>Agricultural Researcher (ITB)</p>', unsafe_allow_html=True)
 
 st.divider()
@@ -115,7 +104,11 @@ st.divider()
 # SIDEBAR
 with st.sidebar:
     st.header("🗂️ Knowledge Warehouse")
-    st.info(f"🧠 Kapasitas: {collection.count()} Knowledge Chunks")
+    try:
+        count = collection.count()
+    except:
+        count = 0
+    st.info(f"🧠 Kapasitas: {count} Knowledge Chunks")
     
     uploaded_file = st.file_uploader("Upload Jurnal Strategis (PDF)", type="pdf")
     if st.button("Tanamkan ke Memori AI"):
@@ -130,6 +123,7 @@ with st.sidebar:
     if admin_input == ADMIN_KEY:
         if st.button("🗑️ Kosongkan Database"):
             db_client.delete_collection("coffee_knowledge_base")
+            collection = db_client.get_or_create_collection(name="coffee_knowledge_base")
             st.warning("Memori dibersihkan."); st.rerun()
 
 # MAIN TABS
@@ -137,15 +131,22 @@ tab1, tab2, tab3 = st.tabs(["💡 Konsultasi Strategi", "📊 Market Dashboard",
 
 with tab1:
     st.subheader("Konsultasi Strategi Hybrid")
-    user_q = st.text_area("Ajukan pertanyaan atau analisis pasar:", height=150, 
-                          placeholder="Bagaimana perkembangan kopi di Indonesia?")
+    user_q = st.text_area("Ajukan pertanyaan:", height=150, placeholder="Contoh: Strategi saat harga turun?")
 
     if st.button("Mulai Analisis AI"):
         if user_q:
-            with st.spinner("Menyisir database jurnal dan berita..."):
+            with st.spinner("Menganalisis..."):
                 news = get_coffee_news()
-                results = collection.query(query_texts=[user_q], n_results=10)
-                j_context = "\n\n".join(results['documents'][0]) if results['documents'] else "Data riset kosong."
+                # --- PROTEKSI DATABASE KOSONG ---
+                try:
+                    results = collection.query(query_texts=[user_q], n_results=5)
+                    if results and results.get('documents') and len(results['documents'][0]) > 0:
+                        j_context = "\n\n".join(results['documents'][0])
+                    else:
+                        j_context = "Data riset internal kosong. Menjawab berdasarkan pengetahuan umum."
+                except:
+                    j_context = "Database tidak terjangkau. Menjawab berdasarkan pengetahuan umum."
+                
                 answer = get_hybrid_analysis(user_q, news, j_context)
                 st.markdown("---")
                 st.info(answer)
@@ -154,23 +155,16 @@ with tab2:
     col_a, col_b = st.columns([1, 1])
     with col_a:
         st.subheader("📰 Market Pulse")
-        w_wib = datetime.now() + timedelta(hours=7)
-        st.caption(f"Live Feed | {w_wib.strftime('%H:%M')} WIB")
         latest_news = get_coffee_news()
         st.write(latest_news)
-    
     with col_b:
         st.subheader("📈 Tren Harga (AI-Extracted)")
         prices = extract_price_from_news(latest_news)
-        chart_df = pd.DataFrame({"Harga (Rp/Kg)": prices})
-        st.line_chart(chart_df)
-        st.caption("Sentimen harga dihitung otomatis dari berita terbaru.")
+        st.line_chart(pd.DataFrame({"Harga (Rp/Kg)": prices}))
 
 with tab3:
     st.subheader("Diagnosa Penyakit Biji Kopi")
     st.warning("Feature Coming Soon: AI-Powered Disease Detection")
-    st.file_uploader("Upload foto sampel (Coming Soon)", type=['png','jpg'], disabled=True)
-    st.info("Penyakit biji kopi akan dideteksi via Computer Vision (Mobile & Web).")
 
 st.divider()
-st.caption("AgriPulse v2.6 | Robust & Secure Edition | Collaboration TelU x ITB")
+st.caption("AgriPulse v2.7 | Anti-Error Edition | TelU x ITB")
