@@ -60,7 +60,6 @@ def extract_price_from_news(news_text):
         )
         raw_output = response.choices[0].message.content
         prices = [int(s) for s in re.findall(r'\d+', raw_output)]
-        # Pastikan return tepat 4 angka
         return prices[:4] if len(prices) >= 4 else [38000, 39500, 41000, 43500]
     except:
         return [38000, 40000, 42000, 41000]
@@ -91,25 +90,25 @@ def get_hybrid_analysis(user_query, news_context, journal_context):
 st.title("☕ AgriPulse AI")
 st.markdown("##### *Hybrid Decision Support System for Coffee Farmers*")
 
-# BRANDING BAR (Disesuaikan dengan nama file Mas)
+# BRANDING BAR (Role Updated)
 col_univ1, col_univ2 = st.columns(2)
 with col_univ1:
     c_logo1, c_text1 = st.columns([1, 4])
     with c_logo1:
-        # Panggil telulogo.webp
         try: st.image("telulogo.webp", width=60)
         except: st.caption("Logo TelU")
     with c_text1:
-        st.markdown('<p class="univ-label"><b>Hijrah Wira Pratama, S.Si.D.</b><br>Lead Researcher (TelU)</p>', unsafe_allow_html=True)
+        # UPDATE ROLE HIJRAH -> AI ENGINEER
+        st.markdown('<p class="univ-label"><b>Hijrah Wira Pratama, S.Si.D.</b><br>AI Engineer (TelU)</p>', unsafe_allow_html=True)
 
 with col_univ2:
     c_logo2, c_text2 = st.columns([1, 4])
     with c_logo2:
-        # Panggil itblogo.png
         try: st.image("itblogo.png", width=55)
         except: st.caption("Logo ITB")
     with c_text2:
-        st.markdown('<p class="univ-label"><b>Yokie Lidiantoro, S.T.</b><br>Lead Engineer (ITB)</p>', unsafe_allow_html=True)
+        # UPDATE ROLE YOKIE -> AGRICULTURAL RESEARCHER
+        st.markdown('<p class="univ-label"><b>Yokie Lidiantoro, S.T.</b><br>Agricultural Researcher (ITB)</p>', unsafe_allow_html=True)
 
 st.divider()
 
@@ -174,4 +173,4 @@ with tab3:
     st.info("Penyakit biji kopi akan dideteksi via Computer Vision (Mobile & Web).")
 
 st.divider()
-st.caption("AgriPulse v2.5 | Robust & Secure Edition | Collaboration TelU x ITB")
+st.caption("AgriPulse v2.6 | Robust & Secure Edition | Collaboration TelU x ITB")
