@@ -6,18 +6,31 @@ from datetime import datetime, timedelta
 import pandas as pd
 import pypdf
 import re
+import os
+
+# --- 0. AUTO-FOLDER CREATION ---
+# Penting agar Streamlit tidak error saat folder database tidak ada di GitHub
+DB_PATH = "./agripulse_db"
+if not os.path.exists(DB_PATH):
+    os.makedirs(DB_PATH)
 
 # --- 1. CONFIG & SETUP ---
 try:
     GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
     ADMIN_KEY = st.secrets.get("ADMIN_KEY", "hijrahxyokixteluxitbangkatan2021") 
 except KeyError:
-    st.error("Konfigurasi Secrets (GROQ_API_KEY) tidak ditemukan.")
+    st.error("Konfigurasi Secrets (GROQ_API_KEY) tidak ditemukan di Streamlit Cloud.")
     st.stop()
 
 client = Groq(api_key=GROQ_API_KEY)
-db_client = chromadb.PersistentClient(path="./agripulse_db")
-collection = db_client.get_or_create_collection(name="coffee_knowledge_base")
+
+# Inisialisasi ChromaDB dengan proteksi error
+try:
+    db_client = chromadb.PersistentClient(path=DB_PATH)
+    collection = db_client.get_or_create_collection(name="coffee_knowledge_base")
+except Exception as e:
+    st.error(f"Gagal inisialisasi Database: {e}")
+    st.stop()
 
 st.set_page_config(page_title="AgriPulse AI", layout="wide", page_icon="☕")
 
@@ -39,7 +52,7 @@ def get_coffee_news():
         gn = GoogleNews(lang='id', country='ID')
         search = gn.search('harga kopi terbaru OR sentimen pasar kopi indonesia')
         news_data = [f"- {entry.title}" for entry in search['entries'][:5]]
-        return "\n".join(news_data)
+        return "\n".join(news_data) if news_data else "Tidak ada berita terbaru."
     except:
         return "Gagal mengambil berita terbaru."
 
@@ -59,6 +72,7 @@ def extract_price_from_news(news_text):
 def process_pdf_to_db(uploaded_file):
     reader = pypdf.PdfReader(uploaded_file)
     text = "".join([p.extract_text() for p in reader.pages if p.extract_text()])
+    # Membagi teks menjadi potongan 1000 karakter
     chunks = [text[i:i+1000] for i in range(0, len(text), 900)]
     waktu_wib = datetime.now() + timedelta(hours=7)
     timestamp = waktu_wib.strftime("%Y%m%d_%H%M%S")
@@ -67,7 +81,11 @@ def process_pdf_to_db(uploaded_file):
     return len(chunks)
 
 def get_hybrid_analysis(user_query, news_context, journal_context):
-    prompt = f"SISTEM: Penasihat Strategis Kopi. BERITA: {news_context}\nRISET: {journal_context}\nUSER: {user_query}"
+    prompt = f"""SISTEM: Penasihat Strategis Kopi Hybrid. 
+    Gunakan konteks BERITA dan RISET JURNAL untuk menjawab. 
+    BERITA: {news_context}
+    RISET JURNAL: {journal_context}
+    PERTANYAAN USER: {user_query}"""
     try:
         completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
@@ -76,7 +94,7 @@ def get_hybrid_analysis(user_query, news_context, journal_context):
         )
         return completion.choices[0].message.content
     except Exception:
-        return "⚠️ Sedang limit. Tunggu sebentar."
+        return "⚠️ Sedang terjadi limit trafik (Rate Limit). Silakan coba lagi dalam 1 menit."
 
 # --- 4. UI LAYOUT ---
 st.title("☕ AgriPulse AI")
@@ -87,7 +105,7 @@ with col_univ1:
     c_logo1, c_text1 = st.columns([1, 4])
     with c_logo1:
         try: st.image("telulogo.webp", width=60)
-        except: st.caption("Logo TelU")
+        except: st.caption("TelU")
     with c_text1:
         st.markdown('<p class="univ-label"><b>Hijrah Wira Pratama, S.Si.D.</b><br>AI Engineer (TelU)</p>', unsafe_allow_html=True)
 
@@ -95,13 +113,13 @@ with col_univ2:
     c_logo2, c_text2 = st.columns([1, 4])
     with c_logo2:
         try: st.image("itblogo.png", width=55)
-        except: st.caption("Logo ITB")
+        except: st.caption("ITB")
     with c_text2:
         st.markdown('<p class="univ-label"><b>Yokie Lidiantoro, S.T.</b><br>Agricultural Researcher (ITB)</p>', unsafe_allow_html=True)
 
 st.divider()
 
-# SIDEBAR
+# --- SIDEBAR ---
 with st.sidebar:
     st.header("🗂️ Knowledge Warehouse")
     try:
@@ -114,8 +132,8 @@ with st.sidebar:
     if st.button("Tanamkan ke Memori AI"):
         if uploaded_file:
             with st.spinner("Menganalisis dokumen..."):
-                process_pdf_to_db(uploaded_file)
-                st.success("Data Tersimpan!"); st.rerun()
+                num = process_pdf_to_db(uploaded_file)
+                st.success(f"Berhasil menanamkan {num} potongan data!"); st.rerun()
 
     st.divider()
     st.subheader("🔐 Admin Access")
@@ -124,32 +142,35 @@ with st.sidebar:
         if st.button("🗑️ Kosongkan Database"):
             db_client.delete_collection("coffee_knowledge_base")
             collection = db_client.get_or_create_collection(name="coffee_knowledge_base")
-            st.warning("Memori dibersihkan."); st.rerun()
+            st.warning("Memori database dibersihkan."); st.rerun()
 
-# MAIN TABS
+# --- MAIN TABS ---
 tab1, tab2, tab3 = st.tabs(["💡 Konsultasi Strategi", "📊 Market Dashboard", "📸 Diagnosa Penyakit"])
 
 with tab1:
     st.subheader("Konsultasi Strategi Hybrid")
-    user_q = st.text_area("Ajukan pertanyaan:", height=150, placeholder="Contoh: Strategi saat harga turun?")
+    user_q = st.text_area("Ajukan pertanyaan atau masalah perkebunan Anda:", height=150, placeholder="Contoh: Bagaimana strategi pupuk organik saat harga jual sedang turun?")
 
     if st.button("Mulai Analisis AI"):
         if user_q:
-            with st.spinner("Menganalisis..."):
+            with st.spinner("Menyisir database jurnal dan berita terbaru..."):
                 news = get_coffee_news()
-                # --- PROTEKSI DATABASE KOSONG ---
+                
+                # Pengambilan konteks dari ChromaDB dengan proteksi jika kosong
                 try:
                     results = collection.query(query_texts=[user_q], n_results=5)
                     if results and results.get('documents') and len(results['documents'][0]) > 0:
                         j_context = "\n\n".join(results['documents'][0])
                     else:
-                        j_context = "Data riset internal kosong. Menjawab berdasarkan pengetahuan umum."
-                except:
-                    j_context = "Database tidak terjangkau. Menjawab berdasarkan pengetahuan umum."
+                        j_context = "Data riset internal kosong. AI akan menjawab berdasarkan pengetahuan umum dan berita."
+                except Exception:
+                    j_context = "Database belum siap. Menggunakan mode pengetahuan umum."
                 
                 answer = get_hybrid_analysis(user_q, news, j_context)
                 st.markdown("---")
                 st.info(answer)
+        else:
+            st.warning("Silakan masukkan pertanyaan terlebih dahulu.")
 
 with tab2:
     col_a, col_b = st.columns([1, 1])
