@@ -2,7 +2,7 @@ AgriPulse: Scaling Precision Agriculture with RAG & Specialized Coffee Research
 
 I recently collaborated with Yokie Lidiantoro, S.T. as Agricultural Researcher from ITB (Institut Teknologi Bandung) to develop AgriPulse, a Decision Support System specifically engineered for the Indonesian coffee industry. We integrated 3,884+ data chunks of specialized research into a high-performance AI architecture.
 
-<img width="1080" height="1080" alt="White   Purple Podcast Collaboration Announcement Instagram Post" src="https://github.com/user-attachments/assets/1501b4dd-f8f3-401c-963c-a9425b3a6b3c" />
+<img width="500" height="500" alt="White   Purple Podcast Collaboration Announcement Instagram Post" src="https://github.com/user-attachments/assets/1501b4dd-f8f3-401c-963c-a9425b3a6b3c" />
 
 https://agripulse-ai-hyteluitb.streamlit.app/
 
