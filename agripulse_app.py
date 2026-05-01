@@ -3,23 +3,27 @@ import os
 import requests
 from streamlit_lottie import st_lottie
 
-# Import LangChain & Pinecone dengan standar terbaru 2026
+# Import Core Pinecone & LangChain
+from pinecone import Pinecone
 from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
-from pinecone import Pinecone
 
-# Utilitas untuk pemrosesan dokumen
+# Import Chain Modern (Lebih stabil dari RetrievalQA)
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
+
+# Document Processing
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.chains.retrieval_qa.base import RetrievalQA
 from pygooglenews import GoogleNews
 
 # --- 1. CONFIGURATION ---
 PINECONE_API_KEY = st.secrets["PINECONE_API_KEY"]
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
-st.set_page_config(page_title="AgriPulse v6.6", page_icon="🌱", layout="wide")
+st.set_page_config(page_title="AgriPulse v6.7", page_icon="🌱", layout="wide")
 
 def load_lottieurl(url):
     try:
@@ -27,26 +31,25 @@ def load_lottieurl(url):
         return r.json() if r.status_code == 200 else None
     except: return None
 
-# --- 2. INTERACTIVE CSS ---
+# --- 2. THEME CSS ---
 st.markdown("""
     <style>
     .main { background: linear-gradient(135deg, #1b4332 0%, #081c15 100%); }
     .stTabs [aria-selected="true"] { background-color: #EE2D24 !important; color: white !important; border-radius: 10px; }
     div.stButton > button { background: linear-gradient(90deg, #2d6a4f, #1b4332) !important; color: white !important; border-radius: 15px; border: none; }
-    div.stButton > button:hover { background: #EE2D24 !important; transform: scale(1.02); }
     h1, h2, h3, p, span { color: white !important; }
     .stMetric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. HEADER & BRANDING ---
+# --- 3. HEADER ---
 with st.container():
     c1, c2, c3 = st.columns([0.8, 0.8, 4.4])
     with c1: st.image("telulogo.webp", width=100) if os.path.exists("telulogo.webp") else st.write("🎓 TelU")
     with c2: st.image("itblogo.png", width=100) if os.path.exists("itblogo.png") else st.write("🌿 ITB")
     with c3:
         st.title("🌱 AGRIPULSE ENGINE")
-        st.caption("AI Engineer: Hijrah Wira Pratama | Researcher: Yokie Lidiantoro")
+        st.caption("AI Systems Engineer: Hijrah Wira Pratama | Researcher: Yokie Lidiantoro")
 
 st.divider()
 
@@ -69,7 +72,7 @@ with st.sidebar:
     st.header("⚙️ Data Pipeline")
     up_file = st.file_uploader("Upload Jurnal Riset (PDF)", type="pdf")
     if up_file and st.button("🚀 Sync Knowledge"):
-        with st.spinner("Mengintegrasikan data ke Cloud Memory..."):
+        with st.spinner("AI sedang memproses..."):
             with open("temp.pdf", "wb") as f: f.write(up_file.getbuffer())
             loader = PyPDFLoader("temp.pdf")
             chunks = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200).split_documents(loader.load())
@@ -78,38 +81,52 @@ with st.sidebar:
             os.remove("temp.pdf")
             st.rerun()
 
-# --- 6. MAIN TABS ---
+# --- 6. MAIN CONTENT ---
 t1, t2, t3 = st.tabs(["💬 AI Chat", "📰 Intelligence Hub", "🔬 Vision Scan"])
 
 with t1:
-    vs = PineconeVectorStore(index_name=idx_name, embedding=embeddings)
-    qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=vs.as_retriever(search_kwargs={"k": 3}))
+    # Setup Retrieval Chain Modern
+    vectorstore = PineconeVectorStore(index_name=idx_name, embedding=embeddings)
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    
+    system_prompt = (
+        "Gunakan konteks berikut untuk menjawab pertanyaan. "
+        "Jika tidak tahu, katakan saja tidak tahu. Jawab dengan ringkas.\n\n"
+        "{context}"
+    )
+    prompt_template = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human", "{input}"),
+    ])
+    
+    question_answer_chain = create_stuff_documents_chain(llm, prompt_template)
+    rag_chain = create_retrieval_chain(retriever, question_answer_chain)
+
     if "msgs" not in st.session_state: st.session_state.msgs = []
     for m in st.session_state.msgs:
         with st.chat_message(m["role"]): st.markdown(m["content"])
+
     if p := st.chat_input("Konsultasikan riset kopi..."):
         st.session_state.msgs.append({"role": "user", "content": p})
         with st.chat_message("user"): st.markdown(p)
         with st.chat_message("assistant"):
-            res = qa.invoke(p)
-            st.markdown(res["result"])
-            st.session_state.msgs.append({"role": "assistant", "content": res["result"]})
+            response = rag_chain.invoke({"input": p})
+            answer = response["answer"]
+            st.markdown(answer)
+            st.session_state.msgs.append({"role": "assistant", "content": answer})
 
 with t2:
-    st.subheader("📰 AI News Summary")
+    st.subheader("📰 AI News Hub")
     try:
         gn = GoogleNews(lang='id', country='ID')
-        search = gn.search('kopi indonesia', when='7d')
+        search = gn.search('pertanian kopi', when='7d')
         for e in search['entries'][:3]:
-            sum_ai = llm.invoke(f"Ringkas berita ini dalam 1 kalimat: {e.title}").content
             with st.expander(f"📌 {e.title}"):
-                st.write(f"**Simpulan AI:** {sum_ai}")
-                st.write(f"[Lihat Sumber]({e.link})")
+                st.write(f"[Buka Sumber]({e.link})")
     except: st.info("Berita sedang diperbarui.")
 
 with t3:
     st.header("🔬 Coffee Vision AI")
-    # Menggunakan file gambar image_68c519.jpg
     if os.path.exists("image_68c519.jpg"):
-        st.image("image_68c519.jpg", use_container_width=True, caption="Inference Interface - YOLOv11 Engine")
-    st.success("**Accuracy:** 98.4% | **Target:** Hemileia vastatrix")
+        st.image("image_68c519.jpg", use_container_width=True, caption="Inference Interface - YOLOv11")
+    st.success("**Accuracy:** 98.4% | **Model:** YOLOv11 Engine")
