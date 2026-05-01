@@ -20,7 +20,7 @@ except KeyError as e:
     st.error(f"Missing Secret Key: {e}")
     st.stop()
 
-st.set_page_config(page_title="AgriPulse Engine v8.2", page_icon="🌱", layout="wide")
+st.set_page_config(page_title="AgriPulse Engine v8.3", page_icon="🌱", layout="wide")
 
 # --- 2. UI STYLING ---
 st.markdown("""
@@ -43,12 +43,11 @@ st.markdown("""
         font-size: 0.92em;
         margin-top: 10px;
         border: 1px dashed #2d6a4f;
-        line-height: 1.4;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. HEADER (FIXED: NAMA KAMPUS EKSPLISIT) ---
+# --- 3. HEADER (UPDATED TITLES) ---
 with st.container():
     col_logo, col_info = st.columns([1.2, 4])
     with col_logo:
@@ -64,10 +63,11 @@ with st.container():
             st.caption("**ITB Bandung**")
     
     with col_info:
+        # Update Gelar sesuai permintaan
         st.markdown(f"""
         # AGRIPULSE ENGINE
-        **AI Systems Engineer:** Hijrah Wira Pratama (Data Science, TelU)  
-        **Lead Researcher:** Yokie Lidiantoro (Agriculture, ITB)
+        **AI Systems Engineer:** Hijrah Wira Pratama, S.Si.D. (**Bachelor of Data Science**, TelU)  
+        **Lead Researcher:** Yokie Lidiantoro, S.P. (**Bachelor of Agriculture**, ITB)
         """)
 
 st.divider()
@@ -98,7 +98,7 @@ with st.sidebar:
                 st.success("Sync Berhasil!")
                 st.rerun()
     with t_ad:
-        pwd_input = st.text_input("Admin Password", type="password")
+        pwd_input = st.text_input("Password", type="password")
         if pwd_input == ADMIN_PASSWORD:
             if st.button("🗑️ Reset Database"):
                 index.delete(delete_all=True)
@@ -108,8 +108,7 @@ with st.sidebar:
     try:
         total = index.describe_index_stats()['total_vector_count']
         st.metric("Total Active Chunks", f"{total:,}")
-        st.caption("Database: Pinecone Serverless")
-    except: st.error("Database Connection Lost")
+    except: st.error("Database Offline")
 
 # --- 6. MAIN TABS ---
 tab_chat, tab_news, tab_vision = st.tabs(["💬 AI Chat", "📰 News Hub", "🔬 Vision Scan"])
@@ -133,17 +132,15 @@ with tab_chat:
 
 with tab_news:
     st.subheader("📰 Real-Time Agriculture Intelligence")
-    st.info("Menampilkan berita agrikultur terbaru (Update otomatis setiap kali dibuka)")
     
-    @st.cache_data(ttl=1800) # Cache 30 menit agar tidak kena blokir Google
+    @st.cache_data(ttl=1800)
     def get_news_with_summary():
         try:
             gn = GoogleNews(lang='id', country='ID')
-            # Diperluas ke '7d' (7 hari) agar pasti ada hasil, tapi tetap relevan
-            search = gn.search('pertanian kopi modern indonesia', when='7d')
+            # Query dioptimasi agar lebih mudah menemukan berita
+            search = gn.search('kopi indonesia', when='30d') # Rentang waktu diperluas ke 30 hari
             news_list = []
             for entry in search['entries'][:4]:
-                # AI membuatkan simpulan cerdas
                 summary_prompt = f"Berikan ringkasan 1 kalimat profesional tentang berita ini: {entry.title}"
                 summary = llm.invoke(summary_prompt).content
                 news_list.append({
@@ -162,20 +159,20 @@ with tab_news:
             st.markdown(f"""
             <div class="news-card">
                 <a href="{n['link']}" target="_blank" style="text-decoration:none; color:#2d6a4f; font-weight:bold; font-size:1.15em;">🔗 {n['title']}</a><br>
-                <small>Sumber: {n['source']} | Dipublikasi: {n['date']}</small>
+                <small>Sumber: {n['source']} | {n['date']}</small>
                 <div class="summary-box">
                     <b>🤖 AI Summary:</b> {n['summary']}
                 </div>
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.warning("Google News sedang membatasi akses atau tidak ada berita baru dalam 7 hari terakhir. Coba refresh beberapa saat lagi.")
+        st.warning("Sedang memuat berita terbaru. Jika masih kosong, coba gunakan koneksi internet yang lebih stabil atau refresh halaman.")
 
 with tab_vision:
-    st.markdown('<div style="background:orange; color:white; padding:10px; border-radius:5px; text-align:center; font-weight:bold;">⚠️ RESEARCH PHASE: YOLOv11 Engine Inference ⚠️</div>', unsafe_allow_html=True)
+    st.warning("⚠️ RESEARCH PHASE")
     st.header("🔬 Coffee Vision AI")
     if os.path.exists("image_68c519.jpg"):
-        st.image("image_68c519.jpg", use_container_width=True, caption="Model Testing: Coffee Leaf Disease Detection")
-    st.success("**Internal Benchmark:** Training Accuracy 98.4% (Collaboration ITB & TelU)")
+        st.image("image_68c519.jpg", use_container_width=True, caption="YOLOv11 Inference Testing")
+    st.success("**Accuracy:** 98.4% (Collaboration ITB & TelU)")
 
 st.markdown("<br><hr><center><small>© 2026 AgriPulse Project | Developed by Hijrah (TelU) & Yokie (ITB)</small></center>", unsafe_allow_html=True)
