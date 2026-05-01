@@ -20,7 +20,7 @@ except KeyError as e:
     st.error(f"Missing Secret Key: {e}")
     st.stop()
 
-st.set_page_config(page_title="AgriPulse Engine v8.3", page_icon="🌱", layout="wide")
+st.set_page_config(page_title="AgriPulse Engine v8.5", page_icon="🌱", layout="wide")
 
 # --- 2. UI STYLING ---
 st.markdown("""
@@ -47,7 +47,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. HEADER (UPDATED TITLES) ---
+# --- 3. HEADER (FIXED TITLES) ---
 with st.container():
     col_logo, col_info = st.columns([1.2, 4])
     with col_logo:
@@ -63,11 +63,11 @@ with st.container():
             st.caption("**ITB Bandung**")
     
     with col_info:
-        # Update Gelar sesuai permintaan
+        # Mas Hijrah: Bachelor of Data Science | Mas Yokie: S.T. (Bachelor of Agriculture ITB)
         st.markdown(f"""
         # AGRIPULSE ENGINE
         **AI Systems Engineer:** Hijrah Wira Pratama, S.Si.D. (**Bachelor of Data Science**, TelU)  
-        **Lead Researcher:** Yokie Lidiantoro, S.P. (**Bachelor of Agriculture**, ITB)
+        **Lead Researcher:** Yokie Lidiantoro, **S.T.** (**Bachelor of Agriculture**, ITB)
         """)
 
 st.divider()
@@ -135,25 +135,30 @@ with tab_news:
     
     @st.cache_data(ttl=1800)
     def get_news_with_summary():
+        queries = ['kopi indonesia', 'pertanian kopi', 'teknologi pertanian']
+        news_list = []
         try:
             gn = GoogleNews(lang='id', country='ID')
-            # Query dioptimasi agar lebih mudah menemukan berita
-            search = gn.search('kopi indonesia', when='30d') # Rentang waktu diperluas ke 30 hari
-            news_list = []
-            for entry in search['entries'][:4]:
-                summary_prompt = f"Berikan ringkasan 1 kalimat profesional tentang berita ini: {entry.title}"
-                summary = llm.invoke(summary_prompt).content
-                news_list.append({
-                    "title": entry.title, 
-                    "link": entry.link, 
-                    "source": entry.source.text, 
-                    "date": entry.published,
-                    "summary": summary
-                })
+            for q in queries:
+                search = gn.search(q, when='30d')
+                if search and search['entries']:
+                    for entry in search['entries'][:3]:
+                        summary_prompt = f"Berikan ringkasan 1 kalimat profesional tentang berita ini: {entry.title}"
+                        summary = llm.invoke(summary_prompt).content
+                        news_list.append({
+                            "title": entry.title, 
+                            "link": entry.link, 
+                            "source": entry.source.text, 
+                            "date": entry.published,
+                            "summary": summary
+                        })
+                    break
             return news_list
         except: return []
 
-    news_data = get_news_with_summary()
+    with st.spinner("Sedang mengambil berita terbaru..."):
+        news_data = get_news_with_summary()
+    
     if news_data:
         for n in news_data:
             st.markdown(f"""
@@ -166,7 +171,10 @@ with tab_news:
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.warning("Sedang memuat berita terbaru. Jika masih kosong, coba gunakan koneksi internet yang lebih stabil atau refresh halaman.")
+        st.warning("Berita tidak dapat dimuat otomatis.")
+        if st.button("🔄 Paksa Muat Ulang Berita"):
+            st.cache_data.clear()
+            st.rerun()
 
 with tab_vision:
     st.warning("⚠️ RESEARCH PHASE")
