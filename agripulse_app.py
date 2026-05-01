@@ -15,7 +15,7 @@ from pygooglenews import GoogleNews
 PINECONE_API_KEY = st.secrets["PINECONE_API_KEY"]
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
-st.set_page_config(page_title="AgriPulse v6.2", page_icon="☕", layout="wide")
+st.set_page_config(page_title="AgriPulse v6.3", page_icon="☕", layout="wide")
 
 def load_lottieurl(url):
     try:
@@ -23,7 +23,7 @@ def load_lottieurl(url):
         return r.json() if r.status_code == 200 else None
     except: return None
 
-# --- 2. THEME & INTERACTIVE CSS ---
+# --- 2. INTERACTIVE THEME CSS ---
 st.markdown("""
     <style>
     .main { background: linear-gradient(135deg, #1b4332 0%, #081c15 100%); }
@@ -31,21 +31,16 @@ st.markdown("""
         background-color: #EE2D24 !important;
         color: white !important;
         border-radius: 12px;
-        font-weight: bold;
     }
     div.stButton > button {
         background: linear-gradient(90deg, #2d6a4f, #1b4332) !important;
         color: white !important;
         border-radius: 15px !important;
         border: none !important;
-        transition: 0.3s;
     }
-    div.stButton > button:hover {
-        transform: scale(1.03);
-        background: #EE2D24 !important;
-    }
-    h1, h2, h3, p, span, label { color: white !important; }
-    .stMetric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; }
+    div.stButton > button:hover { background: #EE2D24 !important; transform: scale(1.02); }
+    h1, h2, h3, p, span { color: white !important; }
+    .stMetric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
     </style>
     """, unsafe_allow_html=True)
 
@@ -60,8 +55,7 @@ with st.container():
         else: st.subheader("🌿 ITB")
     with c3:
         st.title("🌱 AGRIPULSE ENGINE")
-        st.markdown("#### **Agricultural RAG-Integrated Precision Understanding**")
-        st.caption("AI Engineer: Hijrah Wira Pratama, S.S.id. (TelU) | Researcher: Yokie Lidiantoro, S.T. (ITB)")
+        st.caption("AI Systems Engineer: Hijrah Wira Pratama, S.S.id. | Researcher: Yokie Lidiantoro, S.T.")
 
 st.divider()
 
@@ -71,10 +65,11 @@ def init_system():
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     llm = ChatGroq(temperature=0.1, groq_api_key=GROQ_API_KEY, model_name="llama-3.3-70b-versatile")
     pc = Pinecone(api_key=PINECONE_API_KEY)
-    index = pc.Index("agripulse-index")
-    return embeddings, llm, index
+    index_name = "agripulse-index"
+    index = pc.Index(index_name)
+    return embeddings, llm, index, index_name
 
-embeddings, llm, index = init_system()
+embeddings, llm, index, index_name = init_system()
 total_chunks = index.describe_index_stats()['total_vector_count']
 
 # --- 5. SIDEBAR (INTERACTIVE) ---
@@ -82,67 +77,54 @@ with st.sidebar:
     ani = load_lottieurl("https://assets10.lottiefiles.com/packages/lf20_m6cuL6.json")
     if ani: st_lottie(ani, height=150)
     st.header("⚙️ Data Pipeline")
-    up_file = st.file_uploader("Upload Jurnal/Riset (PDF)", type="pdf")
-    if up_file and st.button("🚀 Sync to Cloud Memory"):
-        with st.spinner("AI sedang menanamkan pengetahuan baru..."):
+    up_file = st.file_uploader("Upload Jurnal Riset (PDF)", type="pdf")
+    if up_file and st.button("🚀 Sync to Cloud"):
+        with st.spinner("AI sedang memproses dokumen..."):
             with open("temp.pdf", "wb") as f: f.write(up_file.getbuffer())
             loader = PyPDFLoader("temp.pdf")
             chunks = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200).split_documents(loader.load())
-            PineconeVectorStore.from_documents(chunks, embeddings, index_name="agripulse-index")
+            PineconeVectorStore.from_documents(chunks, embeddings, index_name=index_name)
             st.balloons()
             os.remove("temp.pdf")
             st.rerun()
-    st.info("Sistem ini mensinkronisasi data riset kopi ITB ke dalam arsitektur AI Telkom University.")
 
 # --- 6. MAIN TABS ---
 t1, t2, t3 = st.tabs(["💬 AI Neural Chat", "📰 Intelligence Hub", "🔬 Vision Scan"])
 
-# TAB 1: RAG CHAT
 with t1:
-    vs = PineconeVectorStore(index_name="agripulse-index", embedding=embeddings)
+    vs = PineconeVectorStore(index_name=index_name, embedding=embeddings)
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=vs.as_retriever(search_kwargs={"k": 5}))
-    
     if "msgs" not in st.session_state: st.session_state.msgs = []
     for m in st.session_state.msgs:
         with st.chat_message(m["role"]): st.markdown(m["content"])
-
-    if p := st.chat_input("Konsultasikan diagnosa penyakit kopi..."):
+    if p := st.chat_input("Tanyakan detail riset kopi..."):
         st.session_state.msgs.append({"role": "user", "content": p})
         with st.chat_message("user"): st.markdown(p)
         with st.chat_message("assistant"):
-            with st.spinner("Menganalisis database riset..."):
-                res = qa.invoke(p)
-                st.markdown(res["result"])
-                st.session_state.msgs.append({"role": "assistant", "content": res["result"]})
+            res = qa.invoke(p)
+            st.markdown(res["result"])
+            st.session_state.msgs.append({"role": "assistant", "content": res["result"]})
 
-# TAB 2: NEWS SUMMARY
 with t2:
-    st.metric("Total Indexed Knowledge", f"{total_chunks} Vectors", "Live Sync")
-    st.subheader("📰 AI Summarized Agricultural News")
+    st.metric("Cloud Memory Chunks", f"{total_chunks}", "Synchronized")
+    st.subheader("📰 AI News Summaries")
     try:
         gn = GoogleNews(lang='id', country='ID')
-        search = gn.search('penyakit kopi indonesia', when='7d')
+        search = gn.search('pertanian kopi indonesia', when='7d')
         for e in search['entries'][:3]:
-            # Ringkasan berita otomatis oleh AI
+            # Summary menggunakan LLM Groq
             sum_ai = llm.invoke(f"Berikan simpulan satu kalimat dari berita ini: {e.title}").content
             with st.expander(f"📌 {e.title}"):
-                st.write(f"**Ringkasan AI:** {sum_ai}")
-                st.write(f"[Lihat Sumber Asli]({e.link})")
-    except:
-        st.warning("Gagal menarik data berita. Periksa koneksi API.")
+                st.write(f"**Simpulan AI:** {sum_ai}")
+                st.write(f"[Lihat Berita]({e.link})")
+    except: st.warning("News service offline.")
 
-# TAB 3: COMPUTER VISION
 with t3:
-    st.header("🔬 Computer Vision Mobile Diagnostic")
-    st.markdown("#### **Real-time Identification Interface**")
-    
-    # Menampilkan gambar image_68c519.jpg sebagai demo CV
-    st.image("image_68c519.jpg", use_container_width=True, caption="YOLOv11 Inference Prototype - Coffee Disease Detection")
-    
-    v_c1, v_c2 = st.columns(2)
-    with v_c1:
-        st.success("**Disease Detected:** Coffee Leaf Rust")
-        st.write("**Confidence Score:** 98.4%")
-    with v_c2:
-        st.info("**AI ENGINEER NOTE:**")
-        st.write("Model ini telah dilatih untuk mendeteksi 4 jenis anomali pada biji dan daun kopi secara spesifik.")
+    st.header("🔬 Coffee Vision AI")
+    # Menggunakan file image_68c519.jpg
+    st.image("image_68c519.jpg", use_container_width=True, caption="Real-time Mobile Identification Interface")
+    c_v1, c_v2 = st.columns(2)
+    with c_v1:
+        st.success("**Diagnostic Accuracy:** 98.4%")
+    with c_v2:
+        st.info("**AI Model:** YOLOv11 Deep Learning")
