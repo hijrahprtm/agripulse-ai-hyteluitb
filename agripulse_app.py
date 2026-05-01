@@ -3,8 +3,8 @@ import os
 import requests
 from streamlit_lottie import st_lottie
 
-# Import Core Components
-from pinecone import Cone
+# Import Core Components - FIXED Pinecone Import
+from pinecone import Pinecone
 from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
@@ -23,7 +23,7 @@ from pygooglenews import GoogleNews
 PINECONE_API_KEY = st.secrets["PINECONE_API_KEY"]
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
-st.set_page_config(page_title="AgriPulse v7.0", page_icon="🌱", layout="wide")
+st.set_page_config(page_title="AgriPulse v7.1", page_icon="🌱", layout="wide")
 
 def load_lottieurl(url):
     try:
@@ -58,12 +58,11 @@ st.divider()
 def init_system():
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     llm = ChatGroq(temperature=0.1, groq_api_key=GROQ_API_KEY, model_name="llama-3.3-70b-versatile")
-    pc = Cone(api_key=PINECONE_API_KEY)
+    pc = Pinecone(api_key=PINECONE_API_KEY)
     idx_name = "agripulse-index"
-    index = pc.Index(idx_name)
-    return embeddings, llm, index, idx_name
+    return embeddings, llm, idx_name
 
-embeddings, llm, index, idx_name = init_system()
+embeddings, llm, idx_name = init_system()
 
 # --- 5. SIDEBAR ---
 with st.sidebar:
@@ -90,7 +89,7 @@ with t1:
     retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
     
     # Prompt Template
-    template = """Anda adalah pakar agronomi AgriPulse. Jawablah pertanyaan berdasarkan konteks di bawah ini secara profesional:
+    template = """Anda adalah pakar agronomi AgriPulse. Jawablah pertanyaan berdasarkan konteks di bawah ini:
     
     Konteks: {context}
     
@@ -99,7 +98,7 @@ with t1:
     Jawaban:"""
     prompt = ChatPromptTemplate.from_template(template)
 
-    # LCEL Chain - Cara paling stabil (Tanpa create_retrieval_chain)
+    # LCEL Chain - Clean & Stable
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
 
@@ -134,7 +133,6 @@ with t2:
 
 with t3:
     st.header("🔬 Coffee Vision AI")
-    # Menggunakan file image_68c519.jpg
     if os.path.exists("image_68c519.jpg"):
         st.image("image_68c519.jpg", use_container_width=True, caption="Inference Interface - AgriPulse Vision Engine")
     st.success("**Diagnostic Accuracy:** 98.4%")
