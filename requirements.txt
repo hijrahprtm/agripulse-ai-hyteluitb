@@ -1,3 +1,4 @@
+streamlit
 langchain==0.3.0
 langchain-community==0.3.0
 langchain-text-splitters==0.3.0
@@ -5,11 +6,10 @@ langchain-groq
 langchain-huggingface
 langchain-pinecone
 pinecone
-streamlit
 pypdf
 sentence-transformers
+torchvision
 pygooglenews
 groq
 pandas
 protobuf==3.20.3
-torchvision
