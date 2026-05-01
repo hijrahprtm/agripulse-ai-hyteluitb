@@ -9,88 +9,71 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain.chains import RetrievalQA
 from pygooglenews import GoogleNews
 
-# --- 1. CONFIGURATION & SECRETS ---
+# --- 1. CONFIGURATION ---
 PINECONE_API_KEY = st.secrets["PINECONE_API_KEY"]
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
-# --- 2. APP UI SETUP & CREATIVE THEME ---
-st.set_page_config(page_title="AgriPulse v5.0", page_icon="🌱", layout="wide")
+# --- 2. UI SETUP ---
+st.set_page_config(page_title="AgriPulse v5.1", page_icon="🌱", layout="wide")
 
-# CSS Kreatif: Glassmorphism & Gradient Agriculture
+# CSS Aman: Background Hijau Gelap & Styling Tab
 st.markdown("""
     <style>
-    .stApp {
-        background: linear-gradient(135deg, #1b4332 0%, #081c15 100%);
-        background-image: url("https://www.transparenttextures.com/patterns/leaf.png"), 
-                          linear-gradient(135deg, rgba(27, 67, 50, 0.9) 0%, rgba(8, 28, 21, 0.9) 100%);
+    .main {
+        background-color: #1b4332;
+        color: white;
     }
-    
-    /* Card Glassmorphism */
-    [data-testid="stMetric"], .stTabs, .stSidebarContent {
-        background: rgba(255, 255, 255, 0.05) !important;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px !important;
-        padding: 20px;
-        color: white !important;
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        background-color: rgba(255,255,255,0.1);
+        padding: 10px;
+        border-radius: 10px;
     }
-
-    /* Tab Styling (Merah TelU) */
-    .stTabs [data-baseweb="tab-list"] { background: transparent; }
     .stTabs [aria-selected="true"] {
-        background-color: #EE2D24 !important;
+        background-color: #EE2D24 !important; /* Merah TelU */
         color: white !important;
-        border-radius: 12px;
     }
-    
-    /* Button Styling (Hijau ITB) */
-    div.stButton > button {
-        background: linear-gradient(90deg, #2d6a4f, #1b4332) !important;
-        color: white !important;
-        border-radius: 15px !important;
-        border: none !important;
-        transition: 0.3s;
+    div[data-testid="stExpander"] {
+        background-color: rgba(255,255,255,0.05);
+        border: none;
     }
-    div.stButton > button:hover {
-        transform: scale(1.02);
-        box-shadow: 0 0 15px rgba(45, 106, 79, 0.5);
+    /* Memastikan teks header tidak tumpang tindih */
+    .header-container {
+        padding: 20px;
+        background-color: rgba(0,0,0,0.2);
+        border-radius: 15px;
+        margin-bottom: 25px;
     }
-
-    /* News Box */
-    .news-card {
-        background: rgba(0, 0, 0, 0.2);
-        padding: 15px;
-        border-left: 4px solid #EE2D24;
-        margin-bottom: 10px;
-        border-radius: 0 10px 10px 0;
-    }
-    
-    h1, h2, h3, p, span { color: #ffffff !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. CUSTOM HEADER & BRANDING ---
-col_logo1, col_logo2, col_text = st.columns([0.6, 0.6, 4.8])
+# --- 3. HEADER (Fixed Layout) ---
+with st.container():
+    col_logo1, col_logo2, col_text = st.columns([0.7, 0.7, 4.6])
+    
+    with col_logo1:
+        if os.path.exists("telulogo.webp"):
+            st.image("telulogo.webp", width=100)
+        else:
+            st.write("🎓 TelU")
+            
+    with col_logo2:
+        if os.path.exists("itblogo.png"):
+            st.image("itblogo.png", width=100)
+        else:
+            st.write("🌿 ITB")
 
-with col_logo1:
-    st.image("telulogo.webp", width=100) if os.path.exists("telulogo.webp") else st.write("🎓 TelU")
-with col_logo2:
-    st.image("itblogo.png", width=100) if os.path.exists("itblogo.png") else st.write("🌿 ITB")
+    with col_text:
+        st.title("🌱 AGRIPULSE ENGINE")
+        st.markdown("### **RAG-Integrated Precision Agriculture**")
+        st.write(f"**AI Engineer:** Hijrah Wira Pratama, S.S.id. (Data Science, TelU)")
+        st.write(f"**Researcher:** Yokie Lidiantoro, S.T. (Agriculture, ITB)")
 
-with col_text:
-    st.title("🌱 AGRIPULSE ENGINE")
-    st.markdown("#### **RAG-Integrated Precision Agriculture & Localized Synthesis**")
-    st.markdown(
-        """
-        **AI Engineer:** Hijrah Wira Pratama, S.S.id. (Data Science, TelU)  
-        **Agricultural Researcher:** Yokie Lidiantoro, S.T. (Agriculture, ITB)
-        """
-    )
 st.divider()
 
-# --- 4. MODELS INITIALIZATION ---
+# --- 4. ENGINE INITIALIZATION ---
 @st.cache_resource
-def init_system():
+def init_engine():
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     llm = ChatGroq(temperature=0.1, groq_api_key=GROQ_API_KEY, model_name="llama-3.3-70b-versatile")
     pc = Pinecone(api_key=PINECONE_API_KEY)
@@ -98,80 +81,57 @@ def init_system():
     stats = index.describe_index_stats()
     return embeddings, llm, stats['total_vector_count']
 
-embeddings, llm, total_chunks = init_system()
+embeddings, llm, total_chunks = init_engine()
 
 # --- 5. SIDEBAR ---
 with st.sidebar:
     st.header("⚙️ Data Pipeline")
-    uploaded_file = st.file_uploader("Upload Riset Kopi (PDF)", type="pdf")
-    if uploaded_file and st.button("🚀 Sinkronkan Pengetahuan"):
-        with st.spinner("AI sedang membedah dokumen..."):
-            with open("temp.pdf", "wb") as f: f.write(uploaded_file.getbuffer())
+    up_file = st.file_uploader("Upload Riset Kopi (PDF)", type="pdf")
+    if up_file and st.button("🚀 Sinkronkan Data"):
+        with st.spinner("Processing..."):
+            with open("temp.pdf", "wb") as f: f.write(up_file.getbuffer())
             loader = PyPDFLoader("temp.pdf")
             chunks = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200).split_documents(loader.load())
             PineconeVectorStore.from_documents(chunks, embeddings, index_name="agripulse-index")
-            st.success("Cloud Memory diperbarui!")
             os.remove("temp.pdf")
+            st.success("Sync Success!")
             st.rerun()
 
-# --- 6. MAIN TABS ---
-tab1, tab2, tab3 = st.tabs(["💬 RAG Chat", "📰 Intelligence Hub", "🔬 Vision Scan"])
+# --- 6. TABS ---
+t1, t2, t3 = st.tabs(["💬 AI Chat", "📰 Insights", "🔬 Vision"])
 
-with tab1:
-    # Arsitektur Chat Mas Hijrah
-    vector_store = PineconeVectorStore(index_name="agripulse-index", embedding=embeddings)
-    qa_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=vector_store.as_retriever(search_kwargs={"k": 5}))
+with t1:
+    vs = PineconeVectorStore(index_name="agripulse-index", embedding=embeddings)
+    qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=vs.as_retriever(search_kwargs={"k": 5}))
 
-    if "messages" not in st.session_state: st.session_state.messages = []
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]): st.markdown(msg["content"])
+    if "msgs" not in st.session_state: st.session_state.msgs = []
+    for m in st.session_state.msgs:
+        with st.chat_message(m["role"]): st.markdown(m["content"])
 
-    if prompt := st.chat_input("Konsultasikan data riset pertanian..."):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"): st.markdown(prompt)
+    if p := st.chat_input("Tanya seputar penyakit kopi..."):
+        st.session_state.msgs.append({"role": "user", "content": p})
+        with st.chat_message("user"): st.markdown(p)
         with st.chat_message("assistant"):
-            res = qa_chain.invoke(prompt)
+            res = qa.invoke(p)
             st.markdown(res["result"])
-            st.session_state.messages.append({"role": "assistant", "content": res["result"]})
+            st.session_state.msgs.append({"role": "assistant", "content": res["result"]})
 
-with tab2:
-    st.header("📊 Research & Market Intelligence")
-    c1, c2 = st.columns(2)
-    c1.metric("Neural Chunks", total_chunks)
-    c2.metric("System Health", "Optimal")
-    
-    st.divider()
-    st.subheader("📰 Live Agricultural Summaries")
-    
-    # Fitur Baru: News Summarization
-    with st.spinner("AI sedang merangkum berita terbaru untuk Anda..."):
-        try:
-            gn = GoogleNews(lang='id', country='ID')
-            search = gn.search('budidaya penyakit kopi indonesia', when='7d')
-            for entry in search['entries'][:3]:
-                # AI membuat ringkasan singkat (Simpulan)
-                summary_prompt = f"Berikan ringkasan 1 kalimat dari judul berita ini: {entry.title}"
-                summary = llm.invoke(summary_prompt).content
-                
-                st.markdown(f"""
-                <div class="news-card">
-                    <a href="{entry.link}" style="color: #EE2D24; font-weight: bold;">{entry.title}</a><br>
-                    <p style="font-size: 0.9em; margin-top: 5px;"><b>Simpulan AI:</b> {summary}</p>
-                    <small>Sumber: {entry.source.text} | {entry.published}</small>
-                </div>
-                """, unsafe_allow_html=True)
-        except:
-            st.error("Koneksi berita terputus.")
+with t2:
+    st.metric("Total Knowledge Chunks", total_chunks)
+    st.subheader("📰 AI News Summary")
+    try:
+        gn = GoogleNews(lang='id', country='ID')
+        search = gn.search('pertanian kopi indonesia', when='7d')
+        for e in search['entries'][:3]:
+            # Ringkasan berita otomatis
+            sum_res = llm.invoke(f"Simpulkan berita ini dalam 1 kalimat pendek: {e.title}").content
+            with st.expander(f"📌 {e.title}"):
+                st.write(f"**Simpulan AI:** {sum_res}")
+                st.write(f"[Baca Selengkapnya]({e.link})")
+    except:
+        st.write("Gagal memuat berita.")
 
-with tab3:
-    st.header("🔬 Mobile Computer Vision")
-    v1, v2 = st.columns([3, 2])
-    with v1:
-        st.markdown("### Diagnosis Lapangan Otomatis")
-        st.info("Teknologi: YOLOv11 & FastSAM")
-        st.write("- **Deteksi:** Karat daun, Antraknosa, Bubuk Buah.")
-        st.write("- **Output:** Rekomendasi pestisida organik berdasarkan database Mas Yoki.")
-    with v2:
-        # Gambar Kreatif: Smartphone menscan daun kopi yang sakit
-        st.image("https://images.unsplash.com/photo-1592982537447-7440770cbfc9?q=80&w=400", 
-                 caption="Prototyping Vision-RAG Hybrid")
+with t3:
+    st.header("🔬 Mobile Vision Scan")
+    st.image("https://images.unsplash.com/photo-1592982537447-7440770cbfc9?q=80&w=600", caption="Prototype Deteksi Penyakit")
+    st.info("Fitur YOLOv11 sedang dalam tahap integrasi oleh tim AI Engineer.")
