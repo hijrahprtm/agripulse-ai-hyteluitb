@@ -7,49 +7,54 @@ from pinecone import Pinecone, ServerlessSpec
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.chains import RetrievalQA
+from pygooglenews import GoogleNews
 
 # --- 1. CONFIGURATION & SECRETS ---
 PINECONE_API_KEY = st.secrets["PINECONE_API_KEY"]
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
-# --- 2. APP UI SETUP & CUSTOM THEME ---
-st.set_page_config(page_title="AgriPulse v3.9", page_icon="🌱", layout="wide")
+# --- 2. APP UI SETUP & THEME ENGINE ---
+st.set_page_config(page_title="AgriPulse v4.0", page_icon="🌱", layout="wide")
 
-# Custom CSS untuk tema Merah (TelU) & Hijau (ITB)
+# Custom CSS: Dark Theme, Tab Colors (TelU/ITB), and Button Styling
 st.markdown("""
     <style>
-    /* Mengubah warna font header tab */
+    /* Background Utama */
+    .stApp {
+        background-color: #0E1117;
+        color: #FFFFFF;
+    }
+    /* Tab Styling */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 24px;
+        gap: 10px;
+        background-color: #161B22;
+        padding: 10px;
+        border-radius: 15px;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #f0f2f6;
-        border-radius: 10px 10px 0px 0px;
-        gap: 1px;
-        padding-top: 10px;
-        padding-bottom: 10px;
+        color: #8B949E;
+        padding: 10px 20px;
     }
     .stTabs [aria-selected="true"] {
         background-color: #EE2D24 !important; /* Merah TelU */
         color: white !important;
+        border-radius: 10px;
     }
-    /* Button Styling */
+    /* Button Styling (Hijau ITB) */
     div.stButton > button:first-child {
-        background-color: #006633; /* Hijau ITB */
+        background-color: #006633;
         color: white;
-        border-radius: 8px;
+        border-radius: 10px;
         border: none;
-        width: 100%;
+        font-weight: bold;
     }
     div.stButton > button:hover {
-        background-color: #EE2D24; /* Merah TelU */
-        color: white;
-    }
-    /* Metric Card Styling */
-    [data-testid="stMetricValue"] {
+        border: 2px solid #EE2D24;
         color: #EE2D24;
+    }
+    /* Sidebar Background */
+    [data-testid="stSidebar"] {
+        background-color: #161B22;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -76,10 +81,9 @@ with col_text:
         **Lead Agricultural Researcher:** Yokie Lidiantoro, S.T. (Bachelor of Agriculture, ITB)
         """
     )
-
 st.divider()
 
-# --- 4. INITIALIZE MODELS ---
+# --- 4. INITIALIZE MODELS & DATA ---
 @st.cache_resource
 def init_models():
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
@@ -88,17 +92,13 @@ def init_models():
     
     if index_name not in pc.list_indexes().names():
         pc.create_index(
-            name=index_name,
-            dimension=384,
-            metric='cosine',
+            name=index_name, dimension=384, metric='cosine',
             spec=ServerlessSpec(cloud='aws', region='us-east-1')
         )
     
     index = pc.Index(index_name)
     stats = index.describe_index_stats()
-    current_chunks = stats['total_vector_count']
-    
-    return embeddings, index_name, current_chunks
+    return embeddings, index_name, stats['total_vector_count']
 
 embeddings, index_name, total_chunks = init_models()
 
@@ -123,8 +123,9 @@ with st.sidebar:
     st.caption("Developed by Hijrah (TelU) & Yokie (ITB)")
 
 # --- 6. MAIN TABS ---
-tab1, tab2, tab3 = st.tabs(["💬 AI Assistant", "📊 Research Metrics", "🔬 CV Diagnostic"])
+tab1, tab2, tab3 = st.tabs(["💬 AI Assistant", "📊 Research Insights", "🔬 CV Diagnostic"])
 
+# TAB 1: RAG CHAT
 with tab1:
     vector_store = PineconeVectorStore(index_name=index_name, embedding=embeddings)
     llm = ChatGroq(temperature=0.1, groq_api_key=GROQ_API_KEY, model_name="llama-3.3-70b-versatile")
@@ -145,15 +146,27 @@ with tab1:
             st.markdown(response["result"])
             st.session_state.messages.append({"role": "assistant", "content": response["result"]})
 
+# TAB 2: LIVE NEWS & METRICS
 with tab2:
-    st.header("📈 Research Dashboard")
+    st.header("📈 Research & Market Insights")
     m1, m2 = st.columns(2)
     m1.metric("Cloud Sync Status", "Active", "Online")
-    m2.metric("Total Indexed Knowledge", f"{total_chunks} Chunks", "Live")
+    m2.metric("Total Indexed Knowledge", f"{total_chunks} Chunks", "Live from Pinecone")
+    
     st.divider()
-    st.subheader("📰 Global Agricultural News")
-    st.info("API sedang menarik data berita terbaru...")
+    st.subheader("📰 Latest Coffee Industry News")
+    
+    # Fungsi Live News menggunakan pygooglenews
+    try:
+        gn = GoogleNews(lang='id', country='ID')
+        search = gn.search('pertanian kopi indonesia', when='7d')
+        for entry in search['entries'][:5]:
+            st.markdown(f"**[{entry.title}]({entry.link})**")
+            st.caption(f"Published: {entry.published}")
+    except:
+        st.warning("Gagal memuat berita. Pastikan 'pygooglenews' terinstal.")
 
+# TAB 3: COMPUTER VISION
 with tab3:
     st.header("🔬 Computer Vision Mobile Diagnostic")
     st.warning("🚀 **PROTOTYPE PHASE**")
@@ -162,13 +175,13 @@ with tab3:
     with cv_col1:
         st.markdown("""
         ### Mobile Scanning Workflow:
-        1. **Capture:** Peneliti mengambil foto biji kopi yang terindikasi sakit menggunakan smartphone.
-        2. **Process:** Model YOLOv11 di server melakukan *real-time inference*.
-        3. **Analyze:** AI memberikan diagnosa jenis penyakit (misal: *Coffee Berry Borer* atau *Leaf Rust*).
+        1. **Capture:** Peneliti mengambil foto biji kopi menggunakan smartphone.
+        2. **Process:** Model YOLOv11 melakukan *inference* di server.
+        3. **Analyze:** AI mendiagnosa jenis penyakit secara otomatis.
         """)
-        st.info("Tujuan: Memberikan akses diagnosa cepat di lapangan tanpa harus membawa sampel ke laboratorium.")
+        st.info("Fitur ini sedang dikembangkan untuk membantu petani di lapangan.")
     
     with cv_col2:
-        # Ilustrasi smartphone meng-snap biji kopi yang sakit
-        st.image("https://img.freepik.com/free-photo/hand-holding-smartphone-taking-photo-coffee-beans_1150-14343.jpg", 
-                 caption="Ilustrasi: Mobile Diagnostic menggunakan Computer Vision")
+        # Gambar Placeholder yang AMAN (Menggunakan URL resmi Unsplash yang spesifik kopi)
+        st.image("https://images.unsplash.com/photo-1511537190424-bbbab87ac5eb?q=80&w=400", 
+                 caption="Konsep Deteksi Penyakit via Smartphone")
