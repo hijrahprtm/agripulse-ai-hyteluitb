@@ -1,9 +1,9 @@
 streamlit
 streamlit-lottie
 requests
-langchain>=0.3.0
-langchain-community>=0.3.0
-langchain-text-splitters>=0.3.0
+langchain
+langchain-community
+langchain-text-splitters
 langchain-groq
 langchain-huggingface
 langchain-pinecone
@@ -13,4 +13,3 @@ sentence-transformers
 pygooglenews
 groq
 pandas
-protobuf==3.20.3
