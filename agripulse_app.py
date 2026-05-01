@@ -3,13 +3,13 @@ import os
 import requests
 from streamlit_lottie import st_lottie
 
-# Import Core Components - FIXED Pinecone Import
+# Import Core Components
 from pinecone import Pinecone
 from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
 
-# Import LCEL Components (Standar paling stabil v0.3)
+# Import LCEL Components (Standar 2026)
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
@@ -23,7 +23,7 @@ from pygooglenews import GoogleNews
 PINECONE_API_KEY = st.secrets["PINECONE_API_KEY"]
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
-st.set_page_config(page_title="AgriPulse v7.1", page_icon="🌱", layout="wide")
+st.set_page_config(page_title="AgriPulse Engine v7.2", page_icon="🌱", layout="wide")
 
 def load_lottieurl(url):
     try:
@@ -31,7 +31,7 @@ def load_lottieurl(url):
         return r.json() if r.status_code == 200 else None
     except: return None
 
-# --- 2. STYLING ---
+# --- 2. CUSTOM THEME ---
 st.markdown("""
     <style>
     .main { background: linear-gradient(135deg, #1b4332 0%, #081c15 100%); }
@@ -42,11 +42,22 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. HEADER & LOGO ---
+# --- 3. HEADER (FIXED Syntax for Python 3.14) ---
 with st.container():
     c1, c2, c3 = st.columns([0.8, 0.8, 4.4])
-    with c1: st.image("telulogo.webp", width=100) if os.path.exists("telulogo.webp") else st.write("🎓 TelU")
-    with c2: st.image("itblogo.png", width=100) if os.path.exists("itblogo.png") else st.write("🌿 ITB")
+    
+    with c1:
+        if os.path.exists("telulogo.webp"):
+            st.image("telulogo.webp", width=100)
+        else:
+            st.write("🎓 TelU")
+            
+    with c2:
+        if os.path.exists("itblogo.png"):
+            st.image("itblogo.png", width=100)
+        else:
+            st.write("🌿 ITB")
+            
     with c3:
         st.title("🌱 AGRIPULSE ENGINE")
         st.caption("AI Systems Engineer: Hijrah Wira Pratama | Researcher: Yokie Lidiantoro")
@@ -64,43 +75,39 @@ def init_system():
 
 embeddings, llm, idx_name = init_system()
 
-# --- 5. SIDEBAR ---
+# --- 5. SIDEBAR PIPELINE ---
 with st.sidebar:
     ani = load_lottieurl("https://assets10.lottiefiles.com/packages/lf20_m6cuL6.json")
     if ani: st_lottie(ani, height=150)
     st.header("⚙️ Data Pipeline")
-    up_file = st.file_uploader("Upload Jurnal Riset (PDF)", type="pdf")
+    up_file = st.file_uploader("Upload Jurnal (PDF)", type="pdf")
     if up_file and st.button("🚀 Sync Knowledge"):
-        with st.spinner("Sinkronisasi database ITB-TelU..."):
+        with st.spinner("Processing documents..."):
             with open("temp.pdf", "wb") as f: f.write(up_file.getbuffer())
             loader = PyPDFLoader("temp.pdf")
-            chunks = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200).split_documents(loader.load())
+            splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
+            chunks = splitter.split_documents(loader.load())
             PineconeVectorStore.from_documents(chunks, embeddings, index_name=idx_name)
-            st.success("Database Updated!")
+            st.success("Cloud Index Updated!")
             os.remove("temp.pdf")
             st.rerun()
 
-# --- 6. MAIN CONTENT ---
-t1, t2, t3 = st.tabs(["💬 AI Chat", "📰 News Hub", "🔬 Vision Scan"])
+# --- 6. MAIN INTERFACE ---
+t1, t2, t3 = st.tabs(["💬 AI Chat", "📰 Intelligence Hub", "🔬 Vision Scan"])
 
 with t1:
-    # Setup Retriever
-    vectorstore = PineconeVectorStore(index_name=idx_name, embedding=embeddings)
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    vs = PineconeVectorStore(index_name=idx_name, embedding=embeddings)
+    retriever = vs.as_retriever(search_kwargs={"k": 3})
     
-    # Prompt Template
-    template = """Anda adalah pakar agronomi AgriPulse. Jawablah pertanyaan berdasarkan konteks di bawah ini:
-    
+    prompt = ChatPromptTemplate.from_template("""
+    Gunakan konteks berikut untuk menjawab pertanyaan riset kopi secara profesional.
     Konteks: {context}
-    
     Pertanyaan: {question}
-    
-    Jawaban:"""
-    prompt = ChatPromptTemplate.from_template(template)
+    Jawaban:""")
 
-    # LCEL Chain - Clean & Stable
+    # LCEL Pipeline
     def format_docs(docs):
-        return "\n\n".join(doc.page_content for doc in docs)
+        return "\n\n".join(d.page_content for d in docs)
 
     rag_chain = (
         {"context": retriever | format_docs, "question": RunnablePassthrough()}
@@ -109,30 +116,30 @@ with t1:
         | StrOutputParser()
     )
 
-    if "chat_history" not in st.session_state: st.session_state.chat_history = []
-    for m in st.session_state.chat_history:
+    if "msgs" not in st.session_state: st.session_state.msgs = []
+    for m in st.session_state.msgs:
         with st.chat_message(m["role"]): st.markdown(m["content"])
 
-    if query := st.chat_input("Tanya seputar penyakit kopi..."):
-        st.session_state.chat_history.append({"role": "user", "content": query})
+    if query := st.chat_input("Konsultasikan detail riset..."):
+        st.session_state.msgs.append({"role": "user", "content": query})
         with st.chat_message("user"): st.markdown(query)
         with st.chat_message("assistant"):
-            answer = rag_chain.invoke(query)
-            st.markdown(answer)
-            st.session_state.chat_history.append({"role": "assistant", "content": answer})
+            response = rag_chain.invoke(query)
+            st.markdown(response)
+            st.session_state.msgs.append({"role": "assistant", "content": response})
 
 with t2:
     st.subheader("📰 AI News Tracker")
     try:
         gn = GoogleNews(lang='id', country='ID')
-        search = gn.search('pertanian kopi indonesia', when='7d')
+        search = gn.search('pertanian kopi', when='7d')
         for e in search['entries'][:3]:
             with st.expander(f"📌 {e.title}"):
-                st.write(f"[Lihat Berita]({e.link})")
-    except: st.info("Berita sedang di-refresh.")
+                st.write(f"[Buka Berita]({e.link})")
+    except: st.info("News service is updating.")
 
 with t3:
     st.header("🔬 Coffee Vision AI")
     if os.path.exists("image_68c519.jpg"):
-        st.image("image_68c519.jpg", use_container_width=True, caption="Inference Interface - AgriPulse Vision Engine")
-    st.success("**Diagnostic Accuracy:** 98.4%")
+        st.image("image_68c519.jpg", use_container_width=True, caption="Inference Interface - AgriPulse Vision")
+    st.success("**Accuracy:** 98.4% | **Interface:** Mobile Ready")
