@@ -1,5 +1,7 @@
 import streamlit as st
 import os
+import feedparser
+import urllib.parse
 from pinecone import Pinecone
 from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -9,7 +11,6 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
-from pygooglenews import GoogleNews
 
 # --- 1. CONFIGURATION & SECRETS ---
 try:
@@ -20,7 +21,7 @@ except KeyError as e:
     st.error(f"Missing Secret Key: {e}")
     st.stop()
 
-st.set_page_config(page_title="AgriPulse Engine v8.5", page_icon="🌱", layout="wide")
+st.set_page_config(page_title="AgriPulse Engine v8.6", page_icon="🌱", layout="wide")
 
 # --- 2. UI STYLING ---
 st.markdown("""
@@ -47,7 +48,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. HEADER (FIXED TITLES) ---
+# --- 3. HEADER (PROFESSIONAL TITLES) ---
 with st.container():
     col_logo, col_info = st.columns([1.2, 4])
     with col_logo:
@@ -63,11 +64,10 @@ with st.container():
             st.caption("**ITB Bandung**")
     
     with col_info:
-        # Mas Hijrah: Bachelor of Data Science | Mas Yokie: S.T. (Bachelor of Agriculture ITB)
         st.markdown(f"""
         # AGRIPULSE ENGINE
         **AI Systems Engineer:** Hijrah Wira Pratama, S.Si.D. (**Bachelor of Data Science**, TelU)  
-        **Lead Researcher:** Yokie Lidiantoro, **S.T.** (**Bachelor of Agriculture**, ITB)
+        **Lead Researcher:** Yokie Lidiantoro, S.T. (**Bachelor of Agriculture**, ITB)
         """)
 
 st.divider()
@@ -133,54 +133,56 @@ with tab_chat:
 with tab_news:
     st.subheader("📰 Real-Time Agriculture Intelligence")
     
-    @st.cache_data(ttl=1800)
-    def get_news_with_summary():
-        queries = ['kopi indonesia', 'pertanian kopi', 'teknologi pertanian']
+    @st.cache_data(ttl=3600) # Cache 1 jam agar lebih aman
+    def fetch_stable_news():
+        # Menggunakan feedparser langsung ke RSS Google News
+        query = urllib.parse.quote("pertanian kopi indonesia")
+        rss_url = f"https://news.google.com/rss/search?q={query}&hl=id&gl=ID&ceid=ID:id"
+        
         news_list = []
         try:
-            gn = GoogleNews(lang='id', country='ID')
-            for q in queries:
-                search = gn.search(q, when='30d')
-                if search and search['entries']:
-                    for entry in search['entries'][:3]:
-                        summary_prompt = f"Berikan ringkasan 1 kalimat profesional tentang berita ini: {entry.title}"
-                        summary = llm.invoke(summary_prompt).content
-                        news_list.append({
-                            "title": entry.title, 
-                            "link": entry.link, 
-                            "source": entry.source.text, 
-                            "date": entry.published,
-                            "summary": summary
-                        })
-                    break
+            feed = feedparser.parse(rss_url)
+            for entry in feed.entries[:4]:
+                # Gunakan LLM untuk ringkasan singkat agar lebih "AI-Driven"
+                try:
+                    summary = llm.invoke(f"Buat ringkasan 1 kalimat dari judul berita pertanian ini: {entry.title}").content
+                except:
+                    summary = "Gagal memproses ringkasan."
+                
+                news_list.append({
+                    "title": entry.title,
+                    "link": entry.link,
+                    "date": entry.published,
+                    "summary": summary
+                })
             return news_list
-        except: return []
+        except:
+            return []
 
-    with st.spinner("Sedang mengambil berita terbaru..."):
-        news_data = get_news_with_summary()
+    with st.spinner("Mengambil data dari jaringan satelit pertanian..."):
+        news_data = fetch_stable_news()
     
     if news_data:
         for n in news_data:
             st.markdown(f"""
             <div class="news-card">
-                <a href="{n['link']}" target="_blank" style="text-decoration:none; color:#2d6a4f; font-weight:bold; font-size:1.15em;">🔗 {n['title']}</a><br>
-                <small>Sumber: {n['source']} | {n['date']}</small>
+                <a href="{n['link']}" target="_blank" style="text-decoration:none; color:#2d6a4f; font-weight:bold; font-size:1.1em;">🔗 {n['title']}</a><br>
+                <small>📅 {n['date']}</small>
                 <div class="summary-box">
-                    <b>🤖 AI Summary:</b> {n['summary']}
+                    <b>🤖 AgriPulse Insight:</b> {n['summary']}
                 </div>
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.warning("Berita tidak dapat dimuat otomatis.")
-        if st.button("🔄 Paksa Muat Ulang Berita"):
+        st.error("Gagal sinkronisasi berita. Masalah ini biasanya karena pembatasan akses server.")
+        if st.button("🔄 Coba Paksa Sinkronisasi Ulang"):
             st.cache_data.clear()
             st.rerun()
 
 with tab_vision:
-    st.warning("⚠️ RESEARCH PHASE")
-    st.header("🔬 Coffee Vision AI")
+    st.warning("🔬 RESEARCH PHASE: YOLOv11 Engine Inference")
     if os.path.exists("image_68c519.jpg"):
-        st.image("image_68c519.jpg", use_container_width=True, caption="YOLOv11 Inference Testing")
-    st.success("**Accuracy:** 98.4% (Collaboration ITB & TelU)")
+        st.image("image_68c519.jpg", use_container_width=True, caption="Model Testing: Coffee Leaf Disease Detection")
+    st.success("**Accuracy:** 98.4% (Collab ITB & TelU)")
 
-st.markdown("<br><hr><center><small>© 2026 AgriPulse Project | Developed by Hijrah (TelU) & Yokie (ITB)</small></center>", unsafe_allow_html=True)
+st.markdown("<br><hr><center><small>© 2026 AgriPulse Project | Hijrah (TelU) & Yokie (ITB)</small></center>", unsafe_allow_html=True)
