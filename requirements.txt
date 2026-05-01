@@ -13,3 +13,4 @@ sentence-transformers
 pygooglenews
 groq
 pandas
+protobuf==3.20.3
