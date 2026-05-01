@@ -20,7 +20,7 @@ except KeyError as e:
     st.error(f"Missing Secret Key: {e}")
     st.stop()
 
-st.set_page_config(page_title="AgriPulse Engine v8.0", page_icon="🌱", layout="wide")
+st.set_page_config(page_title="AgriPulse Engine v8.1", page_icon="🌱", layout="wide")
 
 # --- 2. UI STYLING ---
 st.markdown("""
@@ -47,13 +47,21 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. HEADER ---
+# --- 3. HEADER (FIXED FOR PYTHON 3.14) ---
 with st.container():
     col_logo, col_info = st.columns([1, 4])
     with col_logo:
         l1, l2 = st.columns(2)
-        with l1: st.image("telulogo.webp", width=70) if os.path.exists("telulogo.webp") else st.write("🎓")
-        with l2: st.image("itblogo.png", width=70) if os.path.exists("itblogo.png") else st.write("🌿")
+        with l1:
+            if os.path.exists("telulogo.webp"):
+                st.image("telulogo.webp", width=70)
+            else:
+                st.write("🎓")
+        with l2:
+            if os.path.exists("itblogo.png"):
+                st.image("itblogo.png", width=70)
+            else:
+                st.write("🌿")
     with col_info:
         st.markdown(f"# AGRIPULSE ENGINE\n**AI Systems Engineer:** Hijrah Wira Pratama | **Lead Researcher:** Yokie Lidiantoro")
 
@@ -70,7 +78,7 @@ def init_system():
 embeddings, llm, pc, idx_name = init_system()
 index = pc.Index(idx_name)
 
-# --- 5. SIDEBAR (DASHBOARD) ---
+# --- 5. SIDEBAR ---
 with st.sidebar:
     st.header("⚙️ Data Pipeline")
     t_up, t_ad = st.tabs(["📤 Upload", "🔐 Admin"])
@@ -84,8 +92,9 @@ with st.sidebar:
                 os.remove("temp.pdf")
                 st.rerun()
     with t_ad:
-        if st.text_input("Password", type="password") == ADMIN_PASSWORD:
-            if st.button("🗑️ Reset"):
+        pwd_input = st.text_input("Password", type="password")
+        if pwd_input == ADMIN_PASSWORD:
+            if st.button("🗑️ Reset Database"):
                 index.delete(delete_all=True)
                 st.rerun()
     
@@ -117,16 +126,14 @@ with tab_chat:
 
 with tab_news:
     st.subheader("📰 Real-Time Agriculture Intelligence")
-    st.caption("Update otomatis setiap kali halaman dibuka (Berita 1 jam terakhir)")
     
-    @st.cache_data(ttl=3600) # Cache hasil selama 1 jam agar tidak kena limit
+    @st.cache_data(ttl=3600)
     def get_news_with_summary():
         try:
             gn = GoogleNews(lang='id', country='ID')
-            search = gn.search('pertanian kopi indonesia', when='1h') # Ambil berita terbaru 1 jam terakhir
+            search = gn.search('pertanian kopi indonesia', when='1h')
             news_list = []
-            for entry in search['entries'][:3]: # Ambil 3 berita teratas agar cepat
-                # Minta LLM bikin simpulan dari judul berita
+            for entry in search['entries'][:3]:
                 summary_prompt = f"Berikan ringkasan 1 kalimat sangat singkat tentang berita ini: {entry.title}"
                 summary = llm.invoke(summary_prompt).content
                 news_list.append({"title": entry.title, "link": entry.link, "source": entry.source.text, "summary": summary})
@@ -146,12 +153,13 @@ with tab_news:
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.info("Sedang mencari berita terbaru di lapangan... Mohon tunggu sebentar.")
+        st.info("Mencari berita terbaru... (Jika kosong, tekan R untuk refresh)")
 
 with tab_vision:
     st.warning("⚠️ UNDER DEVELOPMENT / RESEARCH PHASE")
     st.header("🔬 Coffee Vision AI")
-    if os.path.exists("image_68c519.jpg"): st.image("image_68c519.jpg", caption="YOLOv11 Inference Testing")
+    if os.path.exists("image_68c519.jpg"):
+        st.image("image_68c519.jpg", caption="YOLOv11 Inference Testing")
     st.success("**Accuracy:** 98.4% (Internal Benchmark)")
 
 st.markdown("<center><small>© 2026 AgriPulse | ITB & TelU Collaboration</small></center>", unsafe_allow_html=True)
