@@ -1,12 +1,10 @@
 **AgriPulse:**
-
+<img width="400" height="400" alt="White   Purple Podcast Collaboration Announcement Instagram Post" src="https://github.com/user-attachments/assets/1501b4dd-f8f3-401c-963c-a9425b3a6b3c" />
 <img width="1366" height="677" alt="WhatsApp Image 2026-05-01 at 22 23 11" src="https://github.com/user-attachments/assets/9c2cd229-ed6d-42fe-89d3-f503d464b95b" />
 <img width="908" height="554" alt="WhatsApp Image 2026-05-01 at 22 25 09" src="https://github.com/user-attachments/assets/c4cad528-1c9b-4828-9d80-0987d3ee34f1" />
 <img width="908" height="554" alt="WhatsApp Image 2026-05-01 at 22 25 09" src="https://github.com/user-attachments/assets/bd96ea49-e382-497a-a8b7-9f57dc28885a" />
 <img width="908" height="554" alt="WhatsApp Image 2026-05-01 at 22 25 09" src="https://github.com/user-attachments/assets/98f36d6b-56cd-42ea-b0f1-d37398a90223" />
 <img width="997" height="569" alt="WhatsApp Image 2026-05-01 at 22 33 27" src="https://github.com/user-attachments/assets/b9888cf2-948b-419e-94b2-5aa71dc60e39" />
-
-<img width="400" height="400" alt="White   Purple Podcast Collaboration Announcement Instagram Post" src="https://github.com/user-attachments/assets/1501b4dd-f8f3-401c-963c-a9425b3a6b3c" />
 
 I recently collaborated with Yokie Lidiantoro, S.T. as Agricultural Researcher from ITB (Institut Teknologi Bandung) to develop AgriPulse, a Decision Support System specifically engineered for the Indonesian coffee industry. We integrated 3,884+ data chunks of specialized research into a high-performance AI architecture. Coffee farmers and industry stakeholders often face complex challenges, ranging from unpredictable land conditions and pest outbreaks to volatile market prices. Agripulse Engine emerges as an integrated smart solution: a specialized AI designed to serve as a personal consultant for farmers and the general public, addressing all coffee industry needs end-to-end. More than just a search engine, Agripulse Engine guides every process from seed to a high-value cup of coffee.
 
