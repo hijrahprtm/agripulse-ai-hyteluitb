@@ -5,7 +5,7 @@ I recently collaborated with Yokie Lidiantoro, S.T. as Agricultural Researcher f
 
 https://agripulse-ai-hyteluitb.streamlit.app/
 
-**Key Advantages of Agripulse Engine:**
+**Key Advantages:**
 - Comprehensive End-to-End Agribusiness Consultation: This AI is trained to provide precision analysis regarding land suitability, nutrient management, and plant requirements. It also covers productivity drivers, integrated pest management strategies, and post-harvest processing techniques to optimize coffee bean quality.
 - Interactive AI Prompting: Operating as an expert consultant available 24/7, users can interact directly to ask specific questions. These range from agronomic issues in the field to economic value analysis and harvest sales strategies.
 - Real-Time News & Market Hub: Integrated with a cutting-edge information center, this feature provides current coffee industry news and market price movements. It empowers farmers with business insights to make more profitable sales decisions.
@@ -14,7 +14,7 @@ https://agripulse-ai-hyteluitb.streamlit.app/
 **Our Vision:**
 Agripulse Engine is not just technology; it is an empowerment initiative through the transfer of coffee knowledge. We aim to minimize the risk of harvest failure, enhance the economic well-being of farmers, and encourage coffee cultivation practices that are smarter, more productive, and sustainable.
  
-**Technical Architecture: Agripulse Engine**
+**Technical Architecture:**
 - Pinecone (Vector Database): Serves as the system's "long-term memory," storing thousands of verified research fragments—ranging from AHP land suitability criteria to specific coffee pathogens like Hemileia vastatrix. It enables high-dimensional semantic search to retrieve precise technical solutions that standard LLMs cannot access.
 - Groq LPU & Llama 3.3: The core inference engine that leverages Groq's ultra-low latency architecture. This provides the deep reasoning capabilities required for complex agricultural diagnostics and real-time agentic decision-making with near-zero latency.
 - LangChain Framework (Orchestration & RAG): Manages the data flow between technical documentation and the language model. By implementing a Retrieval-Augmented Generation (RAG) pipeline, it ensures AI responses are strictly grounded in peer-reviewed journals, effectively eliminating information hallucinations.
