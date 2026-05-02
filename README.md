@@ -1,4 +1,12 @@
 **AgriPulse:**
+
+<img width="997" height="569" alt="WhatsApp Image 2026-05-01 at 22 33 27" src="https://github.com/user-attachments/assets/b4118404-87a6-4b4c-bf72-271591b647ab" />
+<img width="931" height="532" alt="WhatsApp Image 2026-05-01 at 22 30 01" src="https://github.com/user-attachments/assets/24d6d191-6641-4464-89f0-3057be57c8d6" />
+<img width="931" height="532" alt="WhatsApp Image 2026-05-01 at 22 30 01" src="https://github.com/user-attachments/assets/1a835586-1098-45c9-a1a1-4f023496316d" />
+<img width="908" height="554" alt="WhatsApp Image 2026-05-01 at 22 25 09" src="https://github.com/user-attachments/assets/54d06561-8875-49f0-a0ec-710ad8e9d3a3" />
+<img width="1366" height="677" alt="WhatsApp Image 2026-05-01 at 22 23 11" src="https://github.com/user-attachments/assets/c1bae150-4354-43b6-a521-8d5677549b16" />
+
+
 <img width="400" height="400" alt="White   Purple Podcast Collaboration Announcement Instagram Post" src="https://github.com/user-attachments/assets/1501b4dd-f8f3-401c-963c-a9425b3a6b3c" />
 
 I recently collaborated with Yokie Lidiantoro, S.T. as Agricultural Researcher from ITB (Institut Teknologi Bandung) to develop AgriPulse, a Decision Support System specifically engineered for the Indonesian coffee industry. We integrated 3,884+ data chunks of specialized research into a high-performance AI architecture. Coffee farmers and industry stakeholders often face complex challenges, ranging from unpredictable land conditions and pest outbreaks to volatile market prices. Agripulse Engine emerges as an integrated smart solution: a specialized AI designed to serve as a personal consultant for farmers and the general public, addressing all coffee industry needs end-to-end. More than just a search engine, Agripulse Engine guides every process from seed to a high-value cup of coffee.
