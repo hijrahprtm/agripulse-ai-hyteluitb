@@ -1,5 +1,5 @@
 **AgriPulse:**
-<img width="300" height="300" alt="White   Purple Podcast Collaboration Announcement Instagram Post" src="https://github.com/user-attachments/assets/1501b4dd-f8f3-401c-963c-a9425b3a6b3c" />
+<img width="400" height="400" alt="White   Purple Podcast Collaboration Announcement Instagram Post" src="https://github.com/user-attachments/assets/1501b4dd-f8f3-401c-963c-a9425b3a6b3c" />
 
 I recently collaborated with Yokie Lidiantoro, S.T. as Agricultural Researcher from ITB (Institut Teknologi Bandung) to develop AgriPulse, a Decision Support System specifically engineered for the Indonesian coffee industry. We integrated 3,884+ data chunks of specialized research into a high-performance AI architecture. Coffee farmers and industry stakeholders often face complex challenges, ranging from unpredictable land conditions and pest outbreaks to volatile market prices. Agripulse Engine emerges as an integrated smart solution: a specialized AI designed to serve as a personal consultant for farmers and the general public, addressing all coffee industry needs end-to-end. More than just a search engine, Agripulse Engine guides every process from seed to a high-value cup of coffee.
 
